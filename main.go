@@ -9,10 +9,16 @@ import (
 	"ty/csi/ws/SensorsWS/TcpClient"
 	"github.com/kardianos/service"
 	"log"
-	"github.com/Sirupsen/logrus"
-	"github.com/gogap/logrus_mate"
-
+	lg "ty/csi/ws/SensorsWS/lgg"
 )
+
+//region Variables-Modulo
+type ctxWrap struct {
+	ctx context.Context
+	cancel context.CancelFunc
+}
+var _ctx ctxWrap
+//endregion
 
 //region Service-Functions
 type program struct{}
@@ -27,6 +33,7 @@ func (p *program) run() {
 }
 func (p *program) Stop(s service.Service) error {
 	// Stop should not block. Return with a few seconds.
+	dispose()
 	return nil
 }
 //endregion
@@ -35,16 +42,25 @@ func (p *program) Stop(s service.Service) error {
 func main() {
 
 	//Obtenemos la configuracion
+	lg.InitLogger()
+
+	lg.Lgdef.Info(">> Init Main func >>>")
 	getConfig()
 
+	//TODO: initService (Uncomment)
     ctx,cancel := context.WithCancel(context.Background())
-	defer cancel()
+	_ctx.ctx=ctx
+	_ctx.cancel = cancel
 
-	TcpClient.InitClient(ctx)
+	defer dispose()
 
-	for n:=0;n<10;n++ {
+	go TcpClient.InitClient2(_ctx.ctx)
+
+	for n:=0;n<5;n++ {
 		time.Sleep(time.Second)
 	}
+
+	lg.Lgdef.Info("<< Finish Main func <<<")
 }
 
 func initService(){
@@ -60,13 +76,10 @@ func initService(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger, err = s.Logger(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	err = s.Run()
 	if err != nil {
-		logger.Error(err)
+		lg.Lgdef.Error(err)
 	}
 }
 
@@ -91,3 +104,17 @@ func getConfig() {
 	Global.Resources.Config = cnfg
 
 }
+
+//region Aux Functions
+
+func dispose(){
+	lg.Lgdef.Info(">> Dispose start >>> ")
+
+	_ctx.cancel()  //Provoca llamar a ctx.Done() channel
+
+	lg.Lgdef.Info("<< Dispose end <<  ")
+
+
+}
+
+//endregion

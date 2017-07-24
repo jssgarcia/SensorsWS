@@ -6,10 +6,12 @@ import (
 	"fmt"
 	//"os"
 	"log"
-	"Learn/SimpleTcpServer/Global"
+	"ty/csi/ws/SensorsWS/Global"
 	"context"
 	"time"
 	_ "errors"
+	"errors"
+	lg "ty/csi/ws/SensorsWS/lgg"
 )
 
 type wsErr struct {
@@ -21,56 +23,56 @@ func (e *wsErr) Error() string {
 	return fmt.Sprintf("%d: %s",e.code,e.err)
 }
 
+type vars struct {
+	conn net.Conn
+}
+
+var _vars vars
+
+func InitClient2(ctx context.Context) {
+
+	for {
+		select {
+		case <-ctx.Done():
+			lg.Lgdef.Warn("Cancelación recibida: Salimos")
+		dispose()
+		}
+	}
+
+}
 
 func InitClient(ctx context.Context) error {
 
 	//var cancelation struct{}
 	//var bContinue bool = true
+	ticker := time.NewTicker(5 * time.Second)
 
-	//for {
-	//	select {
-	//	case <-ctx.Done():
-	//		log.Println("Cancelacion")
-	//		return errors.New("Cancelacion")
-	//	default:
-	//		{
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			lg.Lgdef.Warn("Cancelación recibida: Salimos")
+			dispose()
+			return errors.New("Cancelacion")
+
+		case <- ticker.C:
 				err := starClient(ctx)
-
-				switch errws := err.(*wsErr); errws.code {
-				case 100:
-					//Error de conexion
-					time.Sleep(5 * time.Second)
-					break
-		//		}
-		//	}
-		//}
+				if err!=nil {
+					lg.Lgdef.Error(err)
+				}
+				//
+				//switch errws := err.(*wsErr); errws.code {
+				//case 999:
+				//	//Error de conexion
+				//	time.Sleep(5 * time.Second)
+				//	break
+				//}
+			break
+		}
 	}
 
 	return nil
 }
-
-	//for bContinue {
-	//
-	//	//cancelation = <-ctx.Done()
-	//	//if cancelation
-	//
-	//	err := starClient(ctx)
-	//
-	//	switch errws := err.(*wsErr); errws.code {
-	//	case 100:
-	//		//Error de conexion
-	//		time.Sleep(5 * time.Second)
-	//		break
-	//
-	//
-	//	case 999:
-	//		//Cancelacion
-	//		bContinue=false
-	//		break
-	//	}
-	//}
-
-
 
 func starClient(ctx context.Context) error {
 
@@ -79,20 +81,19 @@ func starClient(ctx context.Context) error {
 	}
 
 	conn, err := net.Dial("tcp", Global.Resources.Config.ServerAddress)
+	_vars.conn = conn
+
 	if (err!=nil) {
 		return &wsErr{100, "TCP:Server '" + Global.Resources.Config.ServerAddress + "' is not available"}
 	}
 
+	log.Println(">>> TCP CLIENT connected to ... " + Global.Resources.Config.ServerAddress )
+
 	defer func(){
-		if conn!=nil {
-			conn.Close()
-		}
+		dispose()
 	}()
 
 	for {
-
-		log.Println(">>> TCP CLIENT connected ... ")
-
 		message, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			log.Printf("ERROR %v", err)
@@ -108,4 +109,15 @@ func starClient(ctx context.Context) error {
 		//	return &wsErr{999,"TCP:Server. Request cancelation. Exit"}
 		//}
 	}
+}
+
+func dispose() {
+	lg.Lgdef.Debug(">> Dispose INIT >>> ")
+
+	if _vars.conn!=nil {
+		_vars.conn.Close()
+	}
+
+	lg.Lgdef.Debug("<<< Dispose FINISH <<< ")
+
 }
