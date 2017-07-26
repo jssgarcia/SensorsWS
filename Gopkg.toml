@@ -28,4 +28,8 @@
     name = "github.com/kardianos/service"
     branch = "master"
 
+[[constraint]]
+    name = "github.com/gorilla/mux"
+    version = "1.4.0"
+
 

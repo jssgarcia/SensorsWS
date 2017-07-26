@@ -1,3 +1,6 @@
 {
-  "serverAddress": "127.0.0.1:3333"
+  "SensorAServerAddress": "127.0.0.1:3333",
+  "SensorBServerAddress": "127.0.0.1:3334",
+  "SensorCServerAddress": "127.0.0.1:3335",
+  "ServerEndpoint": "127.0.0.1:9091"
 }

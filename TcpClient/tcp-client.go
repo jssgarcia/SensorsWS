@@ -6,13 +6,20 @@ import (
 	"fmt"
 	//"os"
 	"log"
-	"ty/csi/ws/SensorsWS/Global"
 	"context"
 	"time"
 	_ "errors"
-	"errors"
 	lg "ty/csi/ws/SensorsWS/lgg"
+	g "ty/csi/ws/SensorsWS/Global"
+	"math/rand"
 )
+
+type ClientInfo struct {
+	ServerName string
+	ServerAddress string
+	servertx string
+	conn net.Conn
+}
 
 type wsErr struct {
 	code int
@@ -25,23 +32,30 @@ func (e *wsErr) Error() string {
 
 type vars struct {
 	conn net.Conn
+	servertx string
 }
 
 var _vars vars
 
-func InitClient2(ctx context.Context) {
+//func InitClient2(ctx context.Context) {
+//
+//	for {
+//		select {
+//		case <-ctx.Done():
+//			lg.Lgdef.Warn("Cancelación recibida: Salimos")
+//			dispose(info)
+//			return
+//		}
+//	}
+//
+//}
 
-	for {
-		select {
-		case <-ctx.Done():
-			lg.Lgdef.Warn("Cancelación recibida: Salimos")
-		dispose()
-		}
-	}
+func InitClient(ctx context.Context,info *ClientInfo) {
 
-}
+	_vars.servertx = info.ServerName + " [" + info.ServerAddress + "]"
+	info.servertx = info.ServerName + " [" + info.ServerAddress + "]";
 
-func InitClient(ctx context.Context) error {
+	lg.Lgdef.Info("TCPClient: INIT " + info.servertx)
 
 	//var cancelation struct{}
 	//var bContinue bool = true
@@ -51,12 +65,12 @@ func InitClient(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
-			lg.Lgdef.Warn("Cancelación recibida: Salimos")
-			dispose()
-			return errors.New("Cancelacion")
+			lg.Lgdef.Warnf("TCPClient(%s): Cancelación recibida: Salimos",info.servertx)
+			dispose(info)
+			return
 
 		case <- ticker.C:
-				err := starClient(ctx)
+				err := starClient(ctx,info)
 				if err!=nil {
 					lg.Lgdef.Error(err)
 				}
@@ -70,54 +84,66 @@ func InitClient(ctx context.Context) error {
 			break
 		}
 	}
-
-	return nil
 }
 
-func starClient(ctx context.Context) error {
+func starClient(ctx context.Context,info *ClientInfo) error {
 
-	if Global.Resources.Config.ServerAddress=="" {
-		panic("ERROR Initiation: Server adddres is not defined")
+	if info.ServerAddress =="" {
+		panic("ERROR Initiation: Server adddres is not defined. " + info.servertx)
 	}
 
-	conn, err := net.Dial("tcp", Global.Resources.Config.ServerAddress)
+	conn, err := net.Dial("tcp", info.ServerAddress)
 	_vars.conn = conn
 
 	if (err!=nil) {
-		return &wsErr{100, "TCP:Server '" + Global.Resources.Config.ServerAddress + "' is not available"}
+		return &wsErr{100, "TCPClient: Server '" + info.servertx + "' is not available"}
 	}
 
-	log.Println(">>> TCP CLIENT connected to ... " + Global.Resources.Config.ServerAddress )
+	log.Println("=== TCPCLIENT connected to ... " + info.servertx)
 
 	defer func(){
-		dispose()
+		dispose(info)
 	}()
 
 	for {
-		message, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			log.Printf("ERROR %v", err)
-			conn.Close()
+		select {
+		case <-ctx.Done():
+			return &wsErr{999, "TCPClient. Connection is closed. " + _vars.servertx}
+			break
 
-			return &wsErr{100,"TCP:Server. Connection is closed"}
+		default:
+			message, err := bufio.NewReader(conn).ReadString('\n')
+			if err != nil {
+				log.Printf("ERROR %v", err)
+				conn.Close()
 
-		} else {
-			fmt.Println("TCP CLIENT: Message from Server: " + message)
+				return &wsErr{100, "TCPClient. Connection is closed. " + _vars.servertx}
+
+			} else {
+				processInputData(info,message)
+			}
+			break
 		}
-
-		//if <-ctx.Done() {
-		//	return &wsErr{999,"TCP:Server. Request cancelation. Exit"}
-		//}
 	}
 }
 
-func dispose() {
-	lg.Lgdef.Debug(">> Dispose INIT >>> ")
+func processInputData(info *ClientInfo,msg string) {
+	rand.Seed(time.Now().Unix())
 
-	if _vars.conn!=nil {
-		_vars.conn.Close()
+	item :=&g.ItemInfo{Value:rand.Intn(1000-100)+100,Date: time.Now()}
+	g.Resources.Store.Data[info.ServerName]=item
+
+	fmt.Printf("TCPClient: Message from Server(%s): %s\n",info.ServerName, item)
+}
+
+func closeConn(info *ClientInfo) {
+	if info.conn!=nil {
+		info.conn.Close()
 	}
+}
 
-	lg.Lgdef.Debug("<<< Dispose FINISH <<< ")
-
+func dispose(info *ClientInfo) {
+	lg.Lgdef.Debugf("TCPLient(%s): == Dispose INIT === ",_vars.servertx)
+	closeConn(info)
+	lg.Lgdef.Debugf("TCPLient(%s): === Dispose FINISH === ",_vars.servertx)
 }

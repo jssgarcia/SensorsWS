@@ -1,4 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
+
+##Propios
+/log
+
 ### Go template
 # Binaries for programs and plugins
 *.exe
