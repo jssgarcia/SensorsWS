@@ -12,6 +12,7 @@ import (
 	lg "ty/csi/ws/SensorsWS/lgg"
 	g "ty/csi/ws/SensorsWS/Global"
 	"math/rand"
+	"bytes"
 )
 
 type ClientInfo struct {
@@ -112,7 +113,17 @@ func starClient(ctx context.Context,info *ClientInfo) error {
 			break
 
 		default:
-			message, err := bufio.NewReader(conn).ReadString('\n')
+			//original
+			//message, err := bufio.NewReader(conn).ReadString('\r')
+			//Cambio a Scanner
+			scanner := bufio.NewScanner(conn)
+			scanner.Split(ScanCRLF)
+
+			for scanner.Scan() {
+				fmt.Printf("%s\n", scanner.Text())
+			}
+
+			//message, err := bufio.NewReader(conn).ReadByte()
 			if err != nil {
 				log.Printf("ERROR %v", err)
 				conn.Close()
@@ -120,11 +131,36 @@ func starClient(ctx context.Context,info *ClientInfo) error {
 				return &wsErr{100, "TCPClient. Connection is closed. " + _vars.servertx}
 
 			} else {
-				processInputData(info,message)
+				//processInputData(info,message)
+				fmt.Printf( message)
 			}
 			break
 		}
 	}
+}
+
+func dropCR(data []byte) []byte {
+	if len(data) > 0 && data[len(data)-1] == '\r' {
+		return data[0 : len(data)-1]
+	}
+	return data
+}
+
+
+func ScanCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.Index(data, []byte{'\r','\n'}); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 2, dropCR(data[0:i]), nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), dropCR(data), nil
+	}
+	// Request more data.
+	return 0, nil, nil
 }
 
 func processInputData(info *ClientInfo,msg string) {

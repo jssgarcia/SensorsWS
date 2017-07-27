@@ -5,9 +5,9 @@ import (
 )
 //Configuracion
 type Configuration struct {
-	SensorAServerAddress string `json:"SensorServerAddress"` //Direccion tcp del servidor envia datos del A
-	SensorBServerAddress string `json:"SensorServerAddress"` //Direccion tcp del servidor envia datos del B
-	SensorCServerAddress string `json:"SensorServerAddress"` //Direccion tcp del servidor envia datos del C
+	SensorAServerAddress string `json:"SensorAServerAddress"` //Direccion tcp del servidor envia datos del A
+	SensorBServerAddress string `json:"SensorBServerAddress"` //Direccion tcp del servidor envia datos del B
+	SensorCServerAddress string `json:"SensorCServerAddress"` //Direccion tcp del servidor envia datos del C
 	ServerEndpoint      string `json:"ServerEndpoint"`	//Endpoint addres where listen HTTP request
 }
 
