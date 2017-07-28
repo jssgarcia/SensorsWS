@@ -36,10 +36,12 @@ func InitServer(info HttpServerInfo) {
 	router := mux.NewRouter()
 	router.HandleFunc("/{id}", GetSensorPoint).Methods("GET")
 
-	http.ListenAndServe(info.EndpointAddress, router)
+	err := http.ListenAndServe(info.EndpointAddress, router)
+	if (err!=nil) {
+		lgg.Lgdef.Errorf("ERROR INICIAR HTTP-Endpoint %s. %s",info.EndpointAddress,err)
+		panic(err)
+	}
 }
-
-
 
 func GetSensorPoint(w http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
@@ -48,10 +50,11 @@ func GetSensorPoint(w http.ResponseWriter, req *http.Request) {
 		//do something here
 		json.NewEncoder(w).Encode(SensorData{SensorID:params["id"],Data: val})
 	}else {
-		json.NewEncoder(w).Encode(SensorData{SensorID:params["id"],Data:&Global.ItemInfo{}})
+		if params["id"]!="favicon.ico" {
+			lgg.Lgdef.Warnf("HTTPServer: SendorID '%s' no encontrado", params["id"])
+			json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], Data: &Global.ItemInfo{}})
+		}
 	}
-
-	lgg.Lgdef.Infof("STORE Global: %s", Global.Resources.Store)
 }
 
 

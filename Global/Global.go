@@ -1,7 +1,6 @@
 package Global
 
 import (
-	"time"
 )
 //Configuracion
 type Configuration struct {
@@ -13,7 +12,7 @@ type Configuration struct {
 
 type ItemInfo struct {
 	Value int	`json:"Value"`
-	Date  time.Time  `json:"TimeReceived"`
+	Date  string  `json:"TimeReceived"`
 }
 type Store struct {
 	Data map[string]*ItemInfo
@@ -31,9 +30,9 @@ var Resources Global
 func init() {
 	Resources.Store.Data = make(map[string]*ItemInfo)
 
-	Resources.Store.Data["A"]= &ItemInfo{5,time.Now()}
-	Resources.Store.Data["B"]= &ItemInfo{5,time.Now()}
-	Resources.Store.Data["C"]= &ItemInfo{5,time.Now()}
+	Resources.Store.Data["A"]= &ItemInfo{0,""}
+	Resources.Store.Data["B"]= &ItemInfo{0,""}
+	Resources.Store.Data["C"]= &ItemInfo{0,""}
 
 	//DB= make(map[string]*ItemInfo)
 	//

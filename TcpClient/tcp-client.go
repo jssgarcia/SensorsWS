@@ -11,8 +11,9 @@ import (
 	_ "errors"
 	lg "ty/csi/ws/SensorsWS/lgg"
 	g "ty/csi/ws/SensorsWS/Global"
-	"math/rand"
 	"bytes"
+	"strings"
+	"strconv"
 )
 
 type ClientInfo struct {
@@ -20,6 +21,7 @@ type ClientInfo struct {
 	ServerAddress string
 	servertx string
 	conn net.Conn
+ 	lastValue int64  //Ultimo valor recibido
 }
 
 type wsErr struct {
@@ -100,11 +102,20 @@ func starClient(ctx context.Context,info *ClientInfo) error {
 		return &wsErr{100, "TCPClient: Server '" + info.servertx + "' is not available"}
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			lg.Lgdef.Errorf("UNHANDLER ERROR [TCPClient %s] %s",info.servertx,r)
+		}
+	}()
+
 	log.Println("=== TCPCLIENT connected to ... " + info.servertx)
 
 	defer func(){
 		dispose(info)
 	}()
+
+	//Last Value
+	info.lastValue = -1
 
 	for {
 		select {
@@ -114,16 +125,8 @@ func starClient(ctx context.Context,info *ClientInfo) error {
 
 		default:
 			//original
-			//message, err := bufio.NewReader(conn).ReadString('\r')
-			//Cambio a Scanner
-			scanner := bufio.NewScanner(conn)
-			scanner.Split(ScanCRLF)
+			msg, err := bufio.NewReader(conn).ReadString('\r')
 
-			for scanner.Scan() {
-				fmt.Printf("%s\n", scanner.Text())
-			}
-
-			//message, err := bufio.NewReader(conn).ReadByte()
 			if err != nil {
 				log.Printf("ERROR %v", err)
 				conn.Close()
@@ -131,8 +134,8 @@ func starClient(ctx context.Context,info *ClientInfo) error {
 				return &wsErr{100, "TCPClient. Connection is closed. " + _vars.servertx}
 
 			} else {
-				//processInputData(info,message)
-				fmt.Printf( message)
+				processInputData(info,msg)
+				//fmt.Printf( msg)
 			}
 			break
 		}
@@ -151,7 +154,7 @@ func ScanCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
-	if i := bytes.Index(data, []byte{'\r','\n'}); i >= 0 {
+	if i := bytes.Index(data, []byte{'\r'}); i >= 0 {
 		// We have a full newline-terminated line.
 		return i + 2, dropCR(data[0:i]), nil
 	}
@@ -163,13 +166,36 @@ func ScanCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
+func removeNoValidCharacters(msg string) string {
+	b := make([]byte, len(msg))
+	var bl int
+	for i := 0; i < len(msg); i++ {
+		c := msg[i]
+		if c >= 32 && c < 127 {
+			b[bl] = c
+			bl++
+		}
+	}
+	return string(b[:bl])
+}
+
 func processInputData(info *ClientInfo,msg string) {
-	rand.Seed(time.Now().Unix())
 
-	item :=&g.ItemInfo{Value:rand.Intn(1000-100)+100,Date: time.Now()}
-	g.Resources.Store.Data[info.ServerName]=item
+	msg = strings.TrimSpace(removeNoValidCharacters(msg))
+	msg = strings.Replace(msg,".","",-1)  //Eliminamos el .
 
-	fmt.Printf("TCPClient: Message from Server(%s): %s\n",info.ServerName, item)
+	num,err := strconv.ParseInt(msg,10,16)
+	if err!=nil {
+		lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. Data received '%s'. ERR: %s\n",info.servertx,msg,err)
+	}
+
+	if info.lastValue!=num {
+		lg.Lgdef.Infof("[TCPCliente: %s] New value data received '%d'\n",info.servertx,num)
+		info.lastValue = num
+
+		item :=&g.ItemInfo{Value:int(info.lastValue),Date: time.Now().Local().Format("02-01-2006 15:04:05")}
+		g.Resources.Store.Data[info.ServerName]=item
+	}
 }
 
 func closeConn(info *ClientInfo) {

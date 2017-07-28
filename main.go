@@ -79,7 +79,7 @@ func initExecution() {
 	_ctx.ctx, _ctx.cancel = context.WithCancel(context.Background())
 
 	//Iniciamos los clientes TPC para escuchar los sensores
-	go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
+	 go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
 		ServerName:    "A",
 		ServerAddress: Global.Resources.Config.SensorAServerAddress, },
 	)
@@ -91,13 +91,14 @@ func initExecution() {
 		ServerName:    "C",
 		ServerAddress: Global.Resources.Config.SensorCServerAddress, },
 	)
+
 	//Iniciamos el servidor HTTP server
 	initHTTPServer()
 }
 
 func initHTTPServer() {
 
-	server.InitServer(
+	 server.InitServer(
 		server.HttpServerInfo{
 			EndpointName:    "Default",
 			EndpointAddress: Global.Resources.Config.ServerEndpoint,
