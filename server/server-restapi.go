@@ -16,8 +16,9 @@ type HttpServerInfo struct {
 }
 
 type SensorData struct {
-	SensorID string   `json:"SensorID,omitempty"`
-	Data *Global.ItemInfo   //`json:"Value,omitempty"`
+	SensorID  string   `json:"SensorID,omitempty"`
+	LastValue *Global.ItemInfo //`json:"Value,omitempty"`
+	ListValue []*Global.ItemInfo
 }
 
 type Address struct {
@@ -46,15 +47,26 @@ func InitServer(info HttpServerInfo) {
 func GetSensorPoint(w http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 
-	if val, ok := Global.Resources.Store.Data[params["id"]]; ok {
+	//if val, ok := Global.Resources.Store.DataLast[params["id"]]; ok {
+	//	//do something here
+	//	json.NewEncoder(w).Encode(SensorData{SensorID:params["id"],DataLast: val})
+	//}else {
+	//	if params["id"]!="favicon.ico" {
+	//		lgg.Lgdef.Warnf("HTTPServer: SendorID '%s' no encontrado", params["id"])
+	//		json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], DataLast: &Global.ItemInfo{}})
+	//	}
+	//}
+
+	if val, ok := Global.Resources.Store.DataQueue[params["id"]]; ok {
 		//do something here
-		json.NewEncoder(w).Encode(SensorData{SensorID:params["id"],Data: val})
+		json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], LastValue: val.GetLast(), ListValue: val.ToList()})
 	}else {
 		if params["id"]!="favicon.ico" {
 			lgg.Lgdef.Warnf("HTTPServer: SendorID '%s' no encontrado", params["id"])
-			json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], Data: &Global.ItemInfo{}})
+			json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], LastValue: nil ,ListValue: []*Global.ItemInfo{}})
 		}
 	}
 }
+
 
 

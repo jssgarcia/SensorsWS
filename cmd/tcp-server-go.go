@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"math/rand"
+	"strconv"
 )
 
 type configuration struct {
@@ -47,7 +49,10 @@ func main() {
 		for bcontinue {
 			select {
 			case <-tmr.C:
-				err := sendData(conn, "PESO1#PESO2")
+				rand.Seed(time.Now().Unix())
+				data := strconv.Itoa(rand.Intn(100)) + ".\r"
+
+				err := sendData(conn, data)
 				if err != nil {
 					fmt.Printf("SERVER: error send data '%s'\n",err)
 					bcontinue=false

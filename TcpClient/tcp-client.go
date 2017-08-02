@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"strings"
 	"strconv"
+	"ty/csi/ws/SensorsWS/Utils"
 )
 
 type ClientInfo struct {
@@ -186,15 +187,20 @@ func processInputData(info *ClientInfo,msg string) {
 
 	num,err := strconv.ParseInt(msg,10,16)
 	if err!=nil {
-		lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. Data received '%s'. ERR: %s\n",info.servertx,msg,err)
+		lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. DataLast received '%s'. ERR: %s\n",info.servertx,msg,err)
 	}
 
-	if info.lastValue!=num {
+	//COMPROBAMOS SI TODOS LOS ELEMENTOS DE LA COLA SON DEL MISMO TIPO.
+	// Si es asi, no encolamos mas, hasta que alguno nueva recepcion llegue distinta a todas las posiciones de la Cola
+	if !g.Resources.Store.DataQueue[info.ServerName].AllEqual(int(num)) {
 		lg.Lgdef.Infof("[TCPCliente: %s] New value data received '%d'\n",info.servertx,num)
 		info.lastValue = num
 
 		item :=&g.ItemInfo{Value:int(info.lastValue),Date: time.Now().Local().Format("02-01-2006 15:04:05")}
-		g.Resources.Store.Data[info.ServerName]=item
+		g.Resources.Store.DataLast[info.ServerName]=item
+		g.Resources.Store.DataQueue[info.ServerName].Push(item)
+
+		lg.Lgdef.Printf("Queue %s\n",Utils.PrettyPrint(g.Resources.Store.DataQueue[info.ServerName]))
 	}
 }
 
