@@ -11,10 +11,18 @@ import (
 	"time"
 	"math/rand"
 	"strconv"
+	"strings"
 )
+
+type randomInterval struct {
+	Max int
+	Min int
+}
 
 type configuration struct {
 	ListenAddress string `json:"listenAddress"`
+	RandomInterval *randomInterval
+
 }
 
 var cnfg configuration
@@ -25,7 +33,10 @@ func main() {
 	//getConfig()
 
 	if len(os.Args) > 1 {
-		cnfg.ListenAddress = os.Args[1]
+		if (len(os.Args)>=1) { cnfg.ListenAddress = os.Args[1] }
+		if (len(os.Args)>=2) {
+			cnfg.RandomInterval = parseRandomRange(os.Args[2])
+		}
 	} else {
 		panic("ServerAdress is not defined")
 	}
@@ -36,6 +47,9 @@ func main() {
 	if err!=nil {
 		panic("Interface ")
 	}
+
+	//Random seed initializion
+	rand.Seed(time.Now().Unix())
 
 	for {
 		conn, _ := ln.Accept()
@@ -49,8 +63,8 @@ func main() {
 		for bcontinue {
 			select {
 			case <-tmr.C:
-				rand.Seed(time.Now().Unix())
-				data := strconv.Itoa(rand.Intn(100)) + ".\r"
+
+				data := strconv.Itoa(getNextRandomValue()) + ".\r"
 
 				err := sendData(conn, data)
 				if err != nil {
@@ -64,6 +78,10 @@ func main() {
 	}
 
 	fmt.Printf("SERVER == Finalizado main ==")
+}
+
+func getNextRandomValue() int{
+	return  rand.Intn(cnfg.RandomInterval.Max-cnfg.RandomInterval.Min)+cnfg.RandomInterval.Min
 }
 
 func sendData(conn net.Conn, data string) error {
@@ -90,6 +108,30 @@ func getConfig() {
 		panic("ERROR obtener configuracion: " + err.Error())
 	}
 
+}
+
+func parseRandomRange(strrange string) (rg *randomInterval) {
+
+	//Defaults
+	rg = &randomInterval{Max: 1000, Min: 0}
+
+	if strrange == "" || !strings.Contains(strrange, ":") {
+		return rg
+	}
+
+	defer func() {
+		//Simplemente TryCatch
+	}()
+
+	s := strings.Split(strrange, ":")
+	if len(s) <= 1 {
+		return rg
+	}
+
+	rg.Max, _ = strconv.Atoi(s[0])
+	rg.Min, _ = strconv.Atoi(s[1])
+
+	return rg
 }
 
 //func startTcpclient() {
