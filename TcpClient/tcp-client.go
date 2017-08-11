@@ -22,7 +22,7 @@ type ClientInfo struct {
 	ServerAddress string
 	servertx string
 	conn net.Conn
- 	lastValue int64  //Ultimo valor recibido
+ 	lastValue float64  //Ultimo valor recibido
 }
 
 type wsErr struct {
@@ -183,25 +183,58 @@ func removeNoValidCharacters(msg string) string {
 func processInputData(info *ClientInfo,msg string) {
 
 	msg = strings.TrimSpace(removeNoValidCharacters(msg))
-	msg = strings.Replace(msg,".","",-1)  //Eliminamos el .
 
-	num,err := strconv.ParseInt(msg,10,16)
-	if err!=nil {
-		lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. DataLast received '%s'. ERR: %s\n",info.servertx,msg,err)
-	}
+	switch info.ServerName {
+	case "A","B":
 
-	//COMPROBAMOS SI TODOS LOS ELEMENTOS DE LA COLA SON DEL MISMO TIPO.
-	// Si es asi, no encolamos mas, hasta que alguno nueva recepcion llegue distinta a todas las posiciones de la Cola
-	if !g.Resources.Store.DataQueue[info.ServerName].AllEqual(int(num)) {
+		msg = strings.Replace(msg,".","",-1)  //Eliminamos el .
+
+		num,err := strconv.ParseFloat(msg,16)
+		if err!=nil {
+			lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. DataLast received '%s'. ERR: %s\n",info.servertx,msg,err)
+		}
+
+		//COMPROBAMOS SI TODOS LOS ELEMENTOS DE LA COLA SON DEL MISMO TIPO.
+		// Si es asi, no encolamos mas, hasta que alguno nueva recepcion llegue distinta a todas las posiciones de la Cola
+		if !g.Resources.Store.DataQueue[info.ServerName].AllEqual(num) {
+			lg.Lgdef.Infof("[TCPCliente: %s] New value data received '%d'\n",info.servertx,num)
+			info.lastValue = num
+
+			item :=&g.ItemInfo{Value:info.lastValue,Date: time.Now().Local().Format("02-01-2006 15:04:05")}
+			g.Resources.Store.DataLast[info.ServerName]=item
+			g.Resources.Store.DataQueue[info.ServerName].Push(item)
+
+			lg.Lgdef.Printf("Queue %s\n",Utils.PrettyPrint(g.Resources.Store.DataQueue[info.ServerName]))
+		}
+
+		break
+
+	case "C":
+		//Los grados no necesitan que se elimine el punto, es importante. Reemplazamos el
+		//msg = strings.Replace(msg,".",",",-1)  //Eliminamos el .
+
+		num,err := strconv.ParseFloat(msg,16)
+		if err!=nil {
+			lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. DataLast received '%s'. ERR: %s\n",info.servertx,msg,err)
+		}
+
+		//COMPROBAMOS SI TODOS LOS ELEMENTOS DE LA COLA SON DEL MISMO TIPO.
+		// Si es asi, no encolamos mas, hasta que alguno nueva recepcion llegue distinta a todas las posiciones de la Cola
 		lg.Lgdef.Infof("[TCPCliente: %s] New value data received '%d'\n",info.servertx,num)
 		info.lastValue = num
 
-		item :=&g.ItemInfo{Value:int(info.lastValue),Date: time.Now().Local().Format("02-01-2006 15:04:05")}
+		item :=&g.ItemInfo{Value:info.lastValue,Date: time.Now().Local().Format("02-01-2006 15:04:05")}
 		g.Resources.Store.DataLast[info.ServerName]=item
 		g.Resources.Store.DataQueue[info.ServerName].Push(item)
 
 		lg.Lgdef.Printf("Queue %s\n",Utils.PrettyPrint(g.Resources.Store.DataQueue[info.ServerName]))
+
+		break
 	}
+
+
+
+
 }
 
 func closeConn(info *ClientInfo) {

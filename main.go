@@ -79,18 +79,30 @@ func initExecution() {
 	_ctx.ctx, _ctx.cancel = context.WithCancel(context.Background())
 
 	//Iniciamos los clientes TPC para escuchar los sensores
-	 go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
-		ServerName:    "A",
-		ServerAddress: Global.Resources.Config.SensorAServerAddress, },
-	)
-	go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
-		ServerName:    "B",
-		ServerAddress: Global.Resources.Config.SensorBServerAddress, },
-	)
-	go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
-		ServerName:    "C",
-		ServerAddress: Global.Resources.Config.SensorCServerAddress, },
-	)
+
+	if Global.Resources.Config.SensorAServerAddress!="" {
+		// Iniciamos TCPCLIENT A
+		go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
+			ServerName:    "A",
+			ServerAddress: Global.Resources.Config.SensorAServerAddress,},
+		)
+	}
+
+	if Global.Resources.Config.SensorBServerAddress!="" {
+		// Iniciamos TCPCLIENT B
+		go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
+			ServerName:    "B",
+			ServerAddress: Global.Resources.Config.SensorBServerAddress,},
+		)
+	}
+
+	if Global.Resources.Config.SensorCServerAddress!="" {
+		// Iniciamos TCPCLIENT C
+		go TcpClient.InitClient(_ctx.ctx, &TcpClient.ClientInfo{
+			ServerName:    "C",
+			ServerAddress: Global.Resources.Config.SensorCServerAddress,},
+		)
+	}
 
 	//Iniciamos el servidor HTTP server
 	initHTTPServer()

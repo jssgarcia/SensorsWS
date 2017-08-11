@@ -9,7 +9,7 @@ type Configuration struct {
 }
 
 type ItemInfo struct {
-	Value int	`json:"Value"`
+	Value float64	`json:"Value"`
 	Date  string  `json:"TimeReceived"`
 }
 type Store struct {
@@ -80,7 +80,7 @@ func (q *QueueItem) GetFirst() (n *ItemInfo){
 	return n
 }
 
-func (q *QueueItem) AllEqual(n int) bool {
+func (q *QueueItem) AllEqual(n float64) bool {
 
 	if (q.Len()<q.MaxItems()) {
 		return false;
