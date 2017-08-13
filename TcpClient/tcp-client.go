@@ -218,6 +218,11 @@ func processInputData(info *ClientInfo,msg string) {
 			lg.Lgdef.Errorf("[TCPCliente: %s] ERR to convert to number. DataLast received '%s'. ERR: %s\n",info.servertx,msg,err)
 		}
 
+		if (num<=3 || num>=25) {
+			lg.Lgdef.Errorf("[TCPCliente: %s] ERR value not in range permitted [3,25]. Value received: '%.1f'\n",info.servertx,num)
+			return
+		}
+
 		//COMPROBAMOS SI TODOS LOS ELEMENTOS DE LA COLA SON DEL MISMO TIPO.
 		// Si es asi, no encolamos mas, hasta que alguno nueva recepcion llegue distinta a todas las posiciones de la Cola
 		lg.Lgdef.Infof("[TCPCliente: %s] New value data received '%d'\n",info.servertx,num)

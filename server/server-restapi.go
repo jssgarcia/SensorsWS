@@ -59,7 +59,7 @@ func GetSensorPoint(w http.ResponseWriter, req *http.Request) {
 
 	if val, ok := Global.Resources.Store.DataQueue[params["id"]]; ok {
 		//do something here
-		json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], LastValue: val.GetLast(), ListValue: val.ToList()})
+		json.NewEncoder(w).Encode(SensorData{SensorID: params["id"], LastValue: val.GetFirst(), ListValue: val.ToList()})
 	}else {
 		if params["id"]!="favicon.ico" {
 			lgg.Lgdef.Warnf("HTTPServer: SendorID '%s' no encontrado", params["id"])
